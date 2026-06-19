@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7efff">
+  <title>7·8월 모임 가능 날짜 조사</title>
+  <style>
+    :root {
+      --ink: #403b4d; --muted: #777181; --line: #e9e1ee;
+      --pink: #ff8fa8; --pink-soft: #fff0f4;
+      --purple: #9886db; --purple-soft: #f1edff;
+      --mint: #59c6a6; --mint-soft: #e8fbf5;
+      --blue: #5f88c9; --paper: rgba(255,255,255,.9);
+      --shadow: 0 18px 45px rgba(91,73,120,.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-width: 320px; color: var(--ink);
+      font-family: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 8% 5%, #ffe4ed 0, transparent 25%),
+        radial-gradient(circle at 94% 12%, #e5f7ff 0, transparent 28%),
+        linear-gradient(145deg, #faf7ff, #fffaf2);
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    .app { width: min(1480px, 100%); min-height: 100vh; margin: auto; padding: 34px 22px 56px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+    h1 { margin: 0 0 7px; font-size: clamp(1.8rem,4vw,3rem); line-height: 1.12; letter-spacing: -.045em; }
+    .subtitle { margin: 0; color: var(--muted); }
+    .header-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+    .soft-button {
+      padding: 10px 15px; border: 1px solid #e6dce9; border-radius: 999px;
+      background: rgba(255,255,255,.85); cursor: pointer; transition: .18s ease;
+    }
+    .soft-button:hover { transform: translateY(-2px); background: #fff; box-shadow: 0 8px 20px rgba(91,73,120,.12); }
+    .status {
+      display: flex; align-items: center; gap: 8px; width: fit-content; margin: 0 0 18px;
+      padding: 8px 12px; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.72); font-size: .82rem;
+    }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #d1c9d6; }
+    .status.online .status-dot { background: var(--mint); box-shadow: 0 0 0 4px var(--mint-soft); }
+    .status.error .status-dot { background: var(--pink); }
+    .setup-notice {
+      display: none; margin-bottom: 18px; padding: 16px 18px; border: 1px solid #f0cad4;
+      border-radius: 18px; color: #825367; background: #fff5f7;
+    }
+    .setup-notice.show { display: block; }
+    .setup-notice strong { display: block; margin-bottom: 4px; }
+    .top-grid { display: grid; grid-template-columns: minmax(350px,.9fr) minmax(430px,1.1fr); gap: 18px; margin-bottom: 18px; }
+    .panel, .calendar {
+      border: 1px solid rgba(255,255,255,.9); border-radius: 24px;
+      background: var(--paper); box-shadow: var(--shadow); backdrop-filter: blur(10px);
+    }
+    .panel { padding: 20px; }
+    .panel h2 { margin: 0 0 13px; font-size: 1.08rem; letter-spacing: -.02em; }
+    .participant-toolbar { display: grid; grid-template-columns: 130px 1fr auto; gap: 8px; }
+    .control {
+      width: 100%; min-width: 0; padding: 10px 11px; border: 1px solid var(--line);
+      border-radius: 13px; outline: none; background: #fff;
+    }
+    .control:focus { border-color: #b5a5e9; box-shadow: 0 0 0 4px var(--purple-soft); }
+    .save-name {
+      border: 0; border-radius: 13px; padding: 0 14px; color: white; background: var(--purple); cursor: pointer;
+    }
+    .person-legend { display: grid; grid-template-columns: repeat(5,1fr); gap: 7px; margin-top: 13px; }
+    .person-chip {
+      overflow: hidden; padding: 7px 5px; border: 1px solid var(--line); border-radius: 11px;
+      color: var(--muted); background: #fff; text-align: center; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .person-chip.active { border-color: #b7a8e7; color: #6e5bac; background: var(--purple-soft); font-weight: 800; }
+    .ranking { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+    .rank-card { min-width: 0; padding: 10px 7px; border-radius: 14px; background: var(--purple-soft); text-align: center; }
+    .rank-card:first-child { background: #fff2c4; }
+    .rank-number { display: block; color: var(--purple); font-size: .68rem; font-weight: 900; }
+    .rank-date { display: block; margin-top: 3px; font-size: .9rem; font-weight: 900; white-space: nowrap; }
+    .rank-count { color: var(--muted); font-size: .72rem; }
+    .ranking-empty { grid-column: 1/-1; padding: 12px; border-radius: 13px; color: var(--muted); background: #faf8fc; text-align: center; font-size: .86rem; }
+    .hint { margin: 0 4px 14px; color: var(--muted); font-size: .8rem; }
+    .calendars { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 19px; }
+    .calendar { padding: 18px; overflow: hidden; }
+    .month-title { display: flex; align-items: center; gap: 9px; margin: 0 0 16px; font-size: 1.3rem; }
+    .month-title::before { width: 11px; height: 11px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 6px var(--pink-soft); content: ""; }
+    .calendar:nth-child(2) .month-title::before { background: var(--purple); box-shadow: 0 0 0 6px var(--purple-soft); }
+    .weekdays, .days { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 6px; }
+    .weekdays { margin-bottom: 6px; color: var(--muted); font-size: .73rem; font-weight: 900; text-align: center; }
+    .weekdays span:first-child { color: #df627a; }
+    .weekdays span:last-child { color: var(--blue); }
+    .day, .spacer { min-height: 104px; }
+    .day {
+      position: relative; display: flex; min-width: 0; flex-direction: column; padding: 8px 5px 7px;
+      border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.94); transition: .18s ease;
+    }
+    .day:hover { transform: translateY(-2px); }
+    .day.all { border-color: var(--mint); background: linear-gradient(145deg,#f6fffa,var(--mint-soft)); box-shadow: 0 7px 18px rgba(63,177,145,.15); }
+    .day.today::after {
+      position: absolute; top: 6px; right: 5px; padding: 2px 5px; border-radius: 999px;
+      color: #966b00; background: #ffefa4; content: "오늘"; font-size: .54rem; font-weight: 900;
+    }
+    .day-number { margin-bottom: auto; font-size: .84rem; font-weight: 900; }
+    .sun .day-number { color: #df5d76; }
+    .sat .day-number { color: var(--blue); }
+    .choices { display: flex; justify-content: center; gap: clamp(3px,.45vw,6px); margin: 8px 0 6px; }
+    .choice {
+      width: clamp(15px,1.35vw,19px); height: clamp(15px,1.35vw,19px); padding: 0;
+      border: 2px solid #cabfe9; border-radius: 50%; background: #fff; cursor: pointer; transition: .15s ease;
+    }
+    .choice:hover { transform: scale(1.17); }
+    .choice.active-person { border-color: #8e79d3; box-shadow: 0 0 0 3px var(--purple-soft); }
+    .choice.selected { border-color: var(--purple); background: var(--purple); box-shadow: inset 0 0 0 2px white; }
+    .choice:disabled { cursor: wait; opacity: .55; }
+    .count { color: var(--muted); font-size: clamp(.59rem,.74vw,.71rem); font-weight: 750; text-align: center; white-space: nowrap; }
+    .all .count { color: #258269; font-weight: 900; }
+    .toast {
+      position: fixed; left: 50%; bottom: 22px; z-index: 10; transform: translate(-50%,25px);
+      padding: 10px 16px; border-radius: 999px; color: white; background: #51495e;
+      opacity: 0; pointer-events: none; transition: .22s ease; font-size: .85rem;
+    }
+    .toast.show { transform: translate(-50%,0); opacity: 1; }
+    @media (max-width: 1050px) {
+      .app { padding-inline: 13px; } .top-grid { grid-template-columns: 1fr; }
+      .calendar { padding: 13px; } .weekdays,.days { gap: 4px; } .day,.spacer { min-height: 94px; }
+    }
+    @media (max-width: 760px) {
+      .app { padding-top: 23px; } header { align-items: flex-start; }
+      .calendars { grid-template-columns: 1fr; } .day,.spacer { min-height: 89px; }
+      .choice { width: 17px; height: 17px; }
+    }
+    @media (max-width: 520px) {
+      header { display: block; } .header-actions { margin-top: 14px; }
+      .panel { padding: 15px; border-radius: 19px; }
+      .participant-toolbar { grid-template-columns: 108px 1fr; }
+      .save-name { grid-column: 1/-1; padding: 9px; }
+      .person-legend { gap: 3px; } .person-chip { padding-inline: 2px; font-size: .65rem; }
+      .ranking { display: flex; overflow-x: auto; padding-bottom: 3px; }
+      .rank-card { min-width: 92px; } .calendar { padding: 10px 6px 12px; border-radius: 20px; }
+      .month-title { margin-left: 7px; } .weekdays,.days { gap: 2px; }
+      .day,.spacer { min-height: 81px; } .day { padding: 6px 1px 5px; border-radius: 10px; }
+      .choices { gap: 2px; margin: 7px 0 5px; } .choice { width: 12px; height: 12px; border-width: 1.5px; }
+      .choice.selected { box-shadow: inset 0 0 0 1px white; }
+      .day-number { font-size: .72rem; } .count { font-size: .53rem; letter-spacing: -.04em; }
+      .day.today::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>7·8월 모임 가능 날짜 조사</h1>
+        <p class="subtitle">친구들과 같은 링크에서 실시간으로 가능한 날을 맞춰보세요.</p>
+      </div>
+      <div class="header-actions">
+        <button class="soft-button" id="shareButton" type="button">링크 복사</button>
+        <button class="soft-button" id="resetButton" type="button">전체 초기화</button>
+      </div>
+    </header>
+
+    <div class="status" id="status"><span class="status-dot"></span><span id="statusText">Firebase 연결 준비 중</span></div>
+    <div class="setup-notice" id="setupNotice">
+      <strong>Firebase 설정이 아직 필요해요.</strong>
+      이 파일 아래쪽의 <code>firebaseConfig</code>에 Firebase 콘솔에서 받은 값을 붙여 넣은 뒤 배포하세요.
+    </div>
+
+    <section class="top-grid">
+      <div class="panel">
+        <h2>나는 누구인가요?</h2>
+        <div class="participant-toolbar">
+          <select class="control" id="personSelect" aria-label="내 이름 선택"></select>
+          <input class="control" id="nameInput" maxlength="12" aria-label="선택한 사람 이름 수정">
+          <button class="save-name" id="saveNameButton" type="button">이름 저장</button>
+        </div>
+        <div class="person-legend" id="personLegend"></div>
+      </div>
+      <div class="panel">
+        <h2>가장 많이 가능한 날짜 TOP 5</h2>
+        <div class="ranking" id="ranking" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <p class="hint">동그라미는 왼쪽부터 1~5번 사람 순서예요. 현재 선택한 내 동그라미는 테두리로 표시됩니다.</p>
+    <section class="calendars" id="calendars"></section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import {
+      getFirestore, doc, onSnapshot, runTransaction, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+    // ================================================================
+    // TODO: Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성에서
+    // 아래 firebaseConfig 전체를 복사해 교체하세요.
+    // apiKey는 Firebase 웹 앱에서 공개되는 식별값이며, 보안은 Firestore 규칙으로 설정합니다.
+    // ================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyB1Ty8INY1rbQp0Va5ou3lgnZKmtOMlKpc",
+  authDomain: "meeting-schedule2026.firebaseapp.com",
+  projectId: "meeting-schedule2026",
+  storageBucket: "meeting-schedule2026.firebasestorage.app",
+  messagingSenderId: "708167268297",
+  appId: "1:708167268297:web:5aeac94ce4883e40179a18"
+};
+    const POLL_COLLECTION = "meetingPolls";
+    const POLL_ID = "july-august-2026";
+    const DEFAULT_NAMES = ["사람1", "사람2", "사람3", "사람4", "사람5"];
+    const MONTHS = [6, 7]; // JavaScript의 월은 0부터 시작: 6=7월, 7=8월
+    const WEEKDAYS = ["일","월","화","수","목","금","토"];
+
+    let names = [...DEFAULT_NAMES];
+    let availability = {};
+    let selectedPerson = Number(sessionStorage.getItem("selectedPerson") || 0);
+    let pollRef = null;
+    let db = null;
+    let connected = false;
+    let toastTimer;
+
+    const isConfigured = !Object.values(firebaseConfig).some(value => String(value).includes("여기에_"));
+
+    function keyFor(month, day) {
+      return `2026-${String(month + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    }
+    function selectedFor(key) {
+      const value = availability[key];
+      return Array.isArray(value) && value.length === 5 ? value.map(Boolean) : [false,false,false,false,false];
+    }
+    function setStatus(text, type = "") {
+      document.getElementById("statusText").textContent = text;
+      document.getElementById("status").className = `status ${type}`;
+    }
+    function toast(message) {
+      const el = document.getElementById("toast");
+      el.textContent = message; el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 2100);
+    }
+    function friendlyError(error) {
+      console.error(error);
+      if (error?.code === "permission-denied") return "Firestore 보안 규칙을 확인해주세요.";
+      if (error?.code === "auth/operation-not-allowed") return "Firebase에서 익명 로그인을 활성화해주세요.";
+      return "연결에 문제가 생겼어요. 잠시 후 다시 시도해주세요.";
+    }
+
+    function renderPeople() {
+      const select = document.getElementById("personSelect");
+      const legend = document.getElementById("personLegend");
+      select.innerHTML = ""; legend.innerHTML = "";
+      names.forEach((name, index) => {
+        const option = document.createElement("option");
+        option.value = index; option.textContent = `${index + 1}. ${name}`;
+        option.selected = index === selectedPerson;
+        select.appendChild(option);
+
+        const chip = document.createElement("div");
+        chip.className = `person-chip${index === selectedPerson ? " active" : ""}`;
+        chip.title = name; chip.textContent = `${index + 1}. ${name}`;
+        legend.appendChild(chip);
+      });
+      document.getElementById("nameInput").value = names[selectedPerson];
+      document.querySelectorAll(".choice").forEach(button => {
+        button.classList.toggle("active-person", Number(button.dataset.person) === selectedPerson);
+      });
+    }
+
+    function renderCalendars() {
+      const root = document.getElementById("calendars");
+      root.innerHTML = "";
+      MONTHS.forEach(month => {
+        const calendar = document.createElement("article");
+        calendar.className = "calendar";
+        calendar.innerHTML = `<h2 class="month-title">2026년 ${month + 1}월</h2>`;
+
+        const weekdays = document.createElement("div");
+        weekdays.className = "weekdays";
+        WEEKDAYS.forEach(label => weekdays.insertAdjacentHTML("beforeend", `<span>${label}</span>`));
+        calendar.appendChild(weekdays);
+
+        const grid = document.createElement("div");
+        grid.className = "days";
+        const first = new Date(2026, month, 1).getDay();
+        const last = new Date(2026, month + 1, 0).getDate();
+        for (let i = 0; i < first; i++) grid.insertAdjacentHTML("beforeend", '<div class="spacer" aria-hidden="true"></div>');
+        for (let day = 1; day <= last; day++) grid.appendChild(createDay(month, day));
+        calendar.appendChild(grid);
+        root.appendChild(calendar);
+      });
+    }
+
+    function createDay(month, day) {
+      const key = keyFor(month, day);
+      const weekday = new Date(2026, month, day).getDay();
+      const box = document.createElement("div");
+      box.className = `day${weekday === 0 ? " sun" : ""}${weekday === 6 ? " sat" : ""}`;
+      box.dataset.date = key;
+      const today = new Date();
+      if (today.getFullYear() === 2026 && today.getMonth() === month && today.getDate() === day) box.classList.add("today");
+
+      const number = document.createElement("div");
+      number.className = "day-number"; number.textContent = day;
+      const choices = document.createElement("div");
+      choices.className = "choices";
+      choices.setAttribute("role","group");
+      choices.setAttribute("aria-label",`${month + 1}월 ${day}일 가능 여부`);
+      for (let person = 0; person < 5; person++) {
+        const button = document.createElement("button");
+        button.type = "button"; button.className = "choice"; button.dataset.person = person;
+        button.addEventListener("click", () => toggleDate(key, person));
+        choices.appendChild(button);
+      }
+      const count = document.createElement("div");
+      count.className = "count";
+      box.append(number, choices, count);
+      updateDay(box);
+      return box;
+    }
+
+    function updateDay(box) {
+      const key = box.dataset.date;
+      const value = selectedFor(key);
+      const count = value.filter(Boolean).length;
+      const [,month,day] = key.split("-").map(Number);
+      box.querySelectorAll(".choice").forEach((button, person) => {
+        button.classList.toggle("selected", value[person]);
+        button.classList.toggle("active-person", person === selectedPerson);
+        button.setAttribute("aria-pressed", String(value[person]));
+        button.setAttribute("aria-label",`${names[person]}, ${month}월 ${day}일 ${value[person] ? "가능 선택됨" : "가능 선택 안 됨"}`);
+      });
+      box.querySelector(".count").textContent = `${count}명 가능`;
+      box.classList.toggle("all", count === 5);
+    }
+
+    function updateAllDays() {
+      document.querySelectorAll(".day").forEach(updateDay);
+      renderRanking();
+    }
+
+    function renderRanking() {
+      const list = [];
+      MONTHS.forEach(month => {
+        const last = new Date(2026, month + 1, 0).getDate();
+        for (let day = 1; day <= last; day++) {
+          const key = keyFor(month, day);
+          const count = selectedFor(key).filter(Boolean).length;
+          if (count) list.push({ key, month: month + 1, day, count });
+        }
+      });
+      list.sort((a,b) => b.count - a.count || a.key.localeCompare(b.key));
+      const ranking = document.getElementById("ranking");
+      ranking.innerHTML = "";
+      if (!list.length) {
+        ranking.innerHTML = '<div class="ranking-empty">아직 선택된 날짜가 없어요. 첫 동그라미를 눌러보세요!</div>';
+        return;
+      }
+      list.slice(0,5).forEach((item,index) => {
+        ranking.insertAdjacentHTML("beforeend",`
+          <div class="rank-card">
+            <span class="rank-number">TOP ${index + 1}</span>
+            <span class="rank-date">${item.month}월 ${item.day}일</span>
+            <span class="rank-count">${item.count}명 가능</span>
+          </div>`);
+      });
+    }
+
+    async function toggleDate(key, person) {
+      if (!connected) return toast("Firebase 연결 후 선택할 수 있어요.");
+      const buttons = document.querySelectorAll(`[data-date="${key}"] .choice`);
+      buttons.forEach(button => button.disabled = true);
+      try {
+        await runTransaction(db, async transaction => {
+          const snapshot = await transaction.get(pollRef);
+          const data = snapshot.exists() ? snapshot.data() : {};
+          const nextAvailability = { ...(data.availability || {}) };
+          const current = Array.isArray(nextAvailability[key]) && nextAvailability[key].length === 5
+            ? [...nextAvailability[key]] : [false,false,false,false,false];
+          current[person] = !current[person];
+          if (current.some(Boolean)) nextAvailability[key] = current;
+          else delete nextAvailability[key];
+          transaction.set(pollRef, {
+            names: Array.isArray(data.names) && data.names.length === 5 ? data.names : DEFAULT_NAMES,
+            availability: nextAvailability,
+            updatedAt: serverTimestamp()
+          });
+        });
+      } catch (error) {
+        toast(friendlyError(error));
+      } finally {
+        buttons.forEach(button => button.disabled = false);
+      }
+    }
+
+    async function saveName() {
+      const newName = document.getElementById("nameInput").value.trim().slice(0,12);
+      if (!newName) return toast("이름을 입력해주세요.");
+      if (!connected) return toast("Firebase 연결 후 저장할 수 있어요.");
+      try {
+        await runTransaction(db, async transaction => {
+          const snapshot = await transaction.get(pollRef);
+          const data = snapshot.exists() ? snapshot.data() : {};
+          const nextNames = Array.isArray(data.names) && data.names.length === 5 ? [...data.names] : [...DEFAULT_NAMES];
+          nextNames[selectedPerson] = newName;
+          transaction.set(pollRef, {
+            names: nextNames,
+            availability: data.availability || {},
+            updatedAt: serverTimestamp()
+          });
+        });
+        toast("이름을 저장했어요.");
+      } catch (error) {
+        toast(friendlyError(error));
+      }
+    }
+
+    async function resetPoll() {
+      if (!connected) return toast("Firebase 연결 후 초기화할 수 있어요.");
+      const answer = prompt('모든 이름과 선택을 지우려면 "초기화"라고 입력해주세요.');
+      if (answer !== "초기화") return;
+      try {
+        await runTransaction(db, async transaction => {
+          transaction.set(pollRef, { names: DEFAULT_NAMES, availability: {}, updatedAt: serverTimestamp() });
+        });
+        toast("모든 데이터를 초기화했어요.");
+      } catch (error) {
+        toast(friendlyError(error));
+      }
+    }
+
+    async function startFirebase() {
+      if (!isConfigured) {
+        document.getElementById("setupNotice").classList.add("show");
+        setStatus("Firebase 설정값을 입력해주세요", "error");
+        return;
+      }
+      try {
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        db = getFirestore(app);
+        pollRef = doc(db, POLL_COLLECTION, POLL_ID);
+        onAuthStateChanged(auth, async user => {
+          if (!user) await signInAnonymously(auth);
+          else listenToPoll();
+        });
+      } catch (error) {
+        setStatus(friendlyError(error), "error");
+      }
+    }
+
+    function listenToPoll() {
+      onSnapshot(pollRef, async snapshot => {
+        if (!snapshot.exists()) {
+          try {
+            await runTransaction(db, async transaction => {
+              const latest = await transaction.get(pollRef);
+              if (!latest.exists()) transaction.set(pollRef, {
+                names: DEFAULT_NAMES, availability: {}, updatedAt: serverTimestamp()
+              });
+            });
+          } catch (error) {
+            setStatus(friendlyError(error), "error");
+          }
+          return;
+        }
+        const data = snapshot.data();
+        names = Array.isArray(data.names) && data.names.length === 5 ? data.names : [...DEFAULT_NAMES];
+        availability = data.availability && typeof data.availability === "object" ? data.availability : {};
+        connected = true;
+        setStatus(snapshot.metadata.hasPendingWrites ? "변경사항 저장 중…" : "실시간으로 연결됨", "online");
+        renderPeople();
+        updateAllDays();
+      }, error => {
+        connected = false;
+        setStatus(friendlyError(error), "error");
+      });
+    }
+
+    document.getElementById("personSelect").addEventListener("change", event => {
+      selectedPerson = Number(event.target.value);
+      sessionStorage.setItem("selectedPerson", selectedPerson);
+      renderPeople();
+    });
+    document.getElementById("saveNameButton").addEventListener("click", saveName);
+    document.getElementById("nameInput").addEventListener("keydown", event => {
+      if (event.key === "Enter") saveName();
+    });
+    document.getElementById("resetButton").addEventListener("click", resetPoll);
+    document.getElementById("shareButton").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(location.href);
+        toast("공유 링크를 복사했어요!");
+      } catch {
+        prompt("아래 주소를 복사해주세요.", location.href);
+      }
+    });
+
+    renderCalendars();
+    renderPeople();
+    renderRanking();
+    startFirebase();
+  </script>
+</body>
+</html>
